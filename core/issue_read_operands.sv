@@ -143,6 +143,7 @@ module issue_read_operands
     logic none, load, store, alu, alu2, ctrl_flow, mult, csr, fpu, fpu_vec, cvxif, accel, aes;
   } fus_busy_t;
 
+  logic vld_o; // FVT
   logic [CVA6Cfg.NrIssuePorts-1:0] stall_raw, stall_rs1, stall_rs2, stall_rs3;
   logic [CVA6Cfg.NrIssuePorts-1:0] fu_busy;  // functional unit is busy
   fus_busy_t [CVA6Cfg.NrIssuePorts-1:0] fus_busy;  // which functional units are considered busy
@@ -1093,6 +1094,8 @@ module issue_read_operands
       x_transaction_rejected_o <= x_transaction_rejected_n;
     end
   end
+
+  assign vld_o = (alu_valid_q | lsu_valid_q | mult_valid_q | fpu_valid_q | fpu_fmt_q | fpu_rm_q | csr_valid_q | branch_valid_q); // FVT
 
   //pragma translate_off
   initial begin

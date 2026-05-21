@@ -16,6 +16,7 @@ module mult
     input  fu_data_t                             fu_data_i,
     // Mult instruction is valid - ISSUE_STAGE
     input  logic                                 mult_valid_i,
+    input  logic [CVA6Cfg.VLEN-1:0]              pc_i, // FVT
     // Mult result - ISSUE_STAGE
     output logic     [         CVA6Cfg.XLEN-1:0] result_o,
     // Mult result is valid - ISSUE_STAGE
@@ -30,6 +31,7 @@ module mult
   logic div_ready_i;  // receiver of division result is able to accept the result
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] mul_trans_id;
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] div_trans_id;
+  logic [CVA6Cfg.VLEN-1:0] div_pc;  // FVT
   logic [CVA6Cfg.XLEN-1:0] mul_result;
   logic [CVA6Cfg.XLEN-1:0] div_result;
 
@@ -61,6 +63,7 @@ module mult
       .clk_i,
       .rst_ni,
       .trans_id_i     (fu_data_i.trans_id),
+      .pc_i           (pc_i), // FVT
       .operation_i    (fu_data_i.operation),
       .operand_a_i    (fu_data_i.operand_a),
       .operand_b_i    (fu_data_i.operand_b),
@@ -129,6 +132,7 @@ module mult
       .clk_i    (clk_i),
       .rst_ni   (rst_ni),
       .id_i     (fu_data_i.trans_id),
+      .pc_i     (pc_i), // FVT
       .op_a_i   (operand_a),
       .op_b_i   (operand_b),
       .opcode_i ({rem, div_signed}),   // 00: udiv, 10: urem, 01: div, 11: rem
@@ -138,6 +142,7 @@ module mult
       .out_vld_o(div_valid),
       .out_rdy_i(div_ready_i),
       .id_o     (div_trans_id),
+      .pc_o     (div_pc), // FVT
       .res_o    (result)
   );
 

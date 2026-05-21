@@ -166,6 +166,7 @@ module cva6
       logic [CVA6Cfg.TRANS_ID_BITS-1:0] trans_id;
       logic                             is_speculative_load;
       logic                             is_speculative_load_miss;
+      logic [CVA6Cfg.VLEN-1:0]          pc;  // FVT
     },
 
 
@@ -337,11 +338,11 @@ module cva6
     // CVXIF request - SUBSYSTEM
     output cvxif_req_t cvxif_req_o,
     // CVXIF response - SUBSYSTEM
-    input cvxif_resp_t cvxif_resp_i,
+    input cvxif_resp_t cvxif_resp_i
     // noc request, can be AXI or OpenPiton - SUBSYSTEM
-    output noc_req_t noc_req_o,
+    // output noc_req_t noc_req_o, FVT: commented out
     // noc response, can be AXI or OpenPiton - SUBSYSTEM
-    input noc_resp_t noc_resp_i
+    // input noc_resp_t noc_resp_i FVT: commented out
 );
 
   localparam type interrupts_t = struct packed {
@@ -1394,55 +1395,182 @@ module cva6
   end
 
   if (CVA6Cfg.DCacheType == config_pkg::WT) begin : gen_cache_wt
+    // ------------------ FVT BEGIN ------------------
+
+    // ICACHE
+    logic pending_icache_req;
+    logic [CVA6Cfg.VLEN-1:0] icache_vaddr_q;
+    logic icache_killed_q;
+
+    // Free signals — solver picks adversarially
+    logic [CVA6Cfg.FETCH_WIDTH-1:0]      icache_data;
+    logic [CVA6Cfg.FETCH_USER_WIDTH-1:0] icache_user;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni) begin
+        pending_icache_req <= 1'b0;
+        icache_vaddr_q     <= '0;
+        icache_killed_q    <= 1'b0;
+      end else begin
+        // pending = "MMU translation in flight"
+        if (icache_dreq_if_cache.req && icache_dreq_cache_if.ready) begin
+          pending_icache_req <= 1'b1;
+          icache_vaddr_q     <= icache_dreq_if_cache.vaddr;
+        end else if (icache_areq_ex_cache.fetch_valid) begin
+          pending_icache_req <= 1'b0;
+        end
+
+        // killed = "in-flight request was killed; suppress the response"
+        if (icache_dreq_if_cache.req && icache_dreq_cache_if.ready) begin
+          icache_killed_q <= icache_dreq_if_cache.kill_s1;
+        end else if (pending_icache_req &&
+                     (icache_dreq_if_cache.kill_s1 || icache_dreq_if_cache.kill_s2)) begin
+          icache_killed_q <= 1'b1;
+        end
+      end
+    end
+
+    assign icache_areq_cache_ex.fetch_req   = pending_icache_req;
+    assign icache_areq_cache_ex.fetch_vaddr = (icache_vaddr_q >> CVA6Cfg.FETCH_ALIGN_BITS)
+                                              << CVA6Cfg.FETCH_ALIGN_BITS;
+
+    assign icache_dreq_cache_if.ready = !pending_icache_req || icache_dreq_cache_if.valid;
+    assign icache_dreq_cache_if.valid = pending_icache_req
+                                        && icache_areq_ex_cache.fetch_valid
+                                        && !icache_killed_q
+                                        && !icache_dreq_if_cache.kill_s2
+                                        && !flush_ctrl_if;
+    assign icache_dreq_cache_if.data  = icache_data;
+    assign icache_dreq_cache_if.user  = CVA6Cfg.FETCH_USER_EN ? icache_user : '0;
+    assign icache_dreq_cache_if.vaddr = icache_vaddr_q;
+    assign icache_dreq_cache_if.ex    = icache_areq_ex_cache.fetch_exception;
+
+    // DCACHE
+
+    // D$ flush ack
+    logic pending_dcache_flush;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni) begin
+        pending_dcache_flush <= 1'b0;
+      end else begin
+        pending_dcache_flush <= dcache_flush_ctrl_cache;
+      end
+    end
+
+    assign dcache_flush_ack_cache_ctrl = pending_dcache_flush;
+
+    // MMU Port
+    // From dcache_req_ports_ex_cache[0] which becomes dcache_req_to_cache[0]
+    // data is undriven
+    logic [CVA6Cfg.XLEN-1:0] mmu_cache_data;
+    logic pending_mmu_rvalid;
+
+    // One cycle delay for mmu cache response
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni) begin
+        pending_mmu_rvalid <= 1'b0;
+      end else begin
+        pending_mmu_rvalid <= dcache_req_to_cache[0].data_req;
+      end
+    end
+
+    assign dcache_req_from_cache[0].data_gnt = dcache_req_to_cache[0].data_req;
+    assign dcache_req_from_cache[0].data_rvalid = pending_mmu_rvalid;
+    assign dcache_req_from_cache[0].data_rdata = mmu_cache_data;
+
+    // Load Cache Port
+    // From dcache_req_ports_ex_cache[1] which becomes dcache_req_to_cache[1]
+    // load_cache_data is undriven
+    logic [CVA6Cfg.XLEN-1:0] load_cache_data;
+    logic pending_load_rvalid, pending_load_rid;
+
+    // One cycle delay for load cache response
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (!rst_ni) begin
+        pending_load_rvalid <= 1'b0;
+        pending_load_rid <= 1'b0;
+      end else begin
+        pending_load_rvalid <= dcache_req_to_cache[1].data_req;
+        pending_load_rid <= dcache_req_to_cache[1].data_id;
+      end
+    end
+
+    assign dcache_req_from_cache[1].data_gnt = dcache_req_to_cache[1].data_req;
+    assign dcache_req_from_cache[1].data_rvalid = pending_load_rvalid;
+    assign dcache_req_from_cache[1].data_rid = pending_load_rid;
+    assign dcache_req_from_cache[1].data_rdata = load_cache_data;
+
+    // Store Cache Port
+    // From dcache_req_ports_ex_cache[2] which becomes dcache_req_to_cache[3]
+    // Immediately acknowledge request
+    assign dcache_req_from_cache[3] = dcache_req_to_cache[3].data_req;
+
+    // Write Buffer Status
+    // Assume no write buffer
+    assign dcache_commit_wbuffer_empty = 1'b0;
+    assign dcache_commit_wbuffer_not_ni = 1'b0;
+
+    // Invalid Ready
+    assign inval_ready = 1'b1;
+
+    // Atomic Response
+    // Assume no atomic instructions
+    assign amo_resp.ack = 1'b0;
+    assign amo_resp.result = '0;
+
+    // FVT commented out for formal harness
     // this is a cache subsystem that is compatible with OpenPiton
-    wt_cache_subsystem #(
-        .CVA6Cfg   (CVA6Cfg),
-        .icache_areq_t(icache_areq_t),
-        .icache_arsp_t(icache_arsp_t),
-        .icache_dreq_t(icache_dreq_t),
-        .icache_drsp_t(icache_drsp_t),
-        .icache_req_t(icache_req_t),
-        .icache_rtrn_t(icache_rtrn_t),
-        .dcache_req_i_t(dcache_req_i_t),
-        .dcache_req_o_t(dcache_req_o_t),
-        .NumPorts  (NumPorts),
-        .noc_req_t (noc_req_t),
-        .noc_resp_t(noc_resp_t)
-    ) i_cache_subsystem (
-        // to D$
-        .clk_i             (clk_i),
-        .rst_ni            (rst_ni),
-        // I$
-        .icache_en_i       (icache_en_csr),
-        .icache_flush_i    (icache_flush_ctrl_cache),
-        .icache_miss_o     (icache_miss_cache_perf),
-        .icache_areq_i     (icache_areq_ex_cache),
-        .icache_areq_o     (icache_areq_cache_ex),
-        .icache_dreq_i     (icache_dreq_if_cache),
-        .icache_dreq_o     (icache_dreq_cache_if),
-        // D$
-        .dcache_enable_i   (dcache_en_csr_nbdcache),
-        .dcache_flush_i    (dcache_flush_ctrl_cache),
-        .dcache_flush_ack_o(dcache_flush_ack_cache_ctrl),
-        // to commit stage
-        .dcache_amo_req_i  (amo_req),
-        .dcache_amo_resp_o (amo_resp),
-        .mbe_i             (mbe),
-        // from PTW, Load Unit  and Store Unit
-        .dcache_miss_o     (dcache_miss_cache_perf),
-        .miss_vld_bits_o   (miss_vld_bits),
-        .dcache_req_ports_i(dcache_req_to_cache),
-        .dcache_req_ports_o(dcache_req_from_cache),
-        // write buffer status
-        .wbuffer_empty_o   (dcache_commit_wbuffer_empty),
-        .wbuffer_not_ni_o  (dcache_commit_wbuffer_not_ni),
-        // memory side
-        .noc_req_o         (noc_req_o),
-        .noc_resp_i        (noc_resp_i),
-        .inval_addr_i      (inval_addr),
-        .inval_valid_i     (inval_valid),
-        .inval_ready_o     (inval_ready)
-    );
+    // wt_cache_subsystem #(
+    //     .CVA6Cfg   (CVA6Cfg),
+    //     .icache_areq_t(icache_areq_t),
+    //     .icache_arsp_t(icache_arsp_t),
+    //     .icache_dreq_t(icache_dreq_t),
+    //     .icache_drsp_t(icache_drsp_t),
+    //     .icache_req_t(icache_req_t),
+    //     .icache_rtrn_t(icache_rtrn_t),
+    //     .dcache_req_i_t(dcache_req_i_t),
+    //     .dcache_req_o_t(dcache_req_o_t),
+    //     .NumPorts  (NumPorts),
+    //     .noc_req_t (noc_req_t),
+    //     .noc_resp_t(noc_resp_t)
+    // ) i_cache_subsystem (
+    //     // to D$
+    //     .clk_i             (clk_i),
+    //     .rst_ni            (rst_ni),
+    //     // I$
+    //     .icache_en_i       (icache_en_csr),
+    //     .icache_flush_i    (icache_flush_ctrl_cache),
+    //     .icache_miss_o     (icache_miss_cache_perf),
+    //     .icache_areq_i     (icache_areq_ex_cache),
+    //     .icache_areq_o     (icache_areq_cache_ex),
+    //     .icache_dreq_i     (icache_dreq_if_cache),
+    //     .icache_dreq_o     (icache_dreq_cache_if),
+    //     // D$
+    //     .dcache_enable_i   (dcache_en_csr_nbdcache),
+    //     .dcache_flush_i    (dcache_flush_ctrl_cache),
+    //     .dcache_flush_ack_o(dcache_flush_ack_cache_ctrl),
+    //     // to commit stage
+    //     .dcache_amo_req_i  (amo_req),
+    //     .dcache_amo_resp_o (amo_resp),
+    //     .mbe_i             (mbe),
+    //     // from PTW, Load Unit  and Store Unit
+    //     .dcache_miss_o     (dcache_miss_cache_perf),
+    //     .miss_vld_bits_o   (miss_vld_bits),
+    //     .dcache_req_ports_i(dcache_req_to_cache),
+    //     .dcache_req_ports_o(dcache_req_from_cache),
+    //     // write buffer status
+    //     .wbuffer_empty_o   (dcache_commit_wbuffer_empty),
+    //     .wbuffer_not_ni_o  (dcache_commit_wbuffer_not_ni),
+    //     // memory side
+    //     .noc_req_o         (noc_req_o),
+    //     .noc_resp_i        (noc_resp_i),
+    //     .inval_addr_i      (inval_addr),
+    //     .inval_valid_i     (inval_valid),
+    //     .inval_ready_o     (inval_ready)
+    // );
+
+    // ------------------ FVT END ------------------
   end else if (
         CVA6Cfg.DCacheType == config_pkg::HPDCACHE_WT ||
         CVA6Cfg.DCacheType == config_pkg::HPDCACHE_WB ||

@@ -32,6 +32,7 @@ module csr_buffer
     output logic csr_ready_o,
     // CSR instruction is valid - ISSUE_STAGE
     input logic csr_valid_i,
+    input logic [CVA6Cfg.VLEN-1:0] pc_i, // FVT
     // CSR buffer result - ISSUE_STAGE
     output logic [CVA6Cfg.XLEN-1:0] csr_result_o,
     // commit the pending CSR OP - TO_BE_COMPLETED
@@ -44,6 +45,7 @@ module csr_buffer
   struct packed {
     logic [11:0] csr_address;
     logic        valid;
+    logic [CVA6Cfg.VLEN-1:0] pc;  // FVT
   }
       csr_reg_n, csr_reg_q;
 
@@ -63,6 +65,7 @@ module csr_buffer
     if (csr_valid_i) begin
       csr_reg_n.csr_address = fu_data_i.operand_b[11:0];
       csr_reg_n.valid       = 1'b1;
+      csr_reg_n.pc          = pc_i;  // FVT
     end
     // if we get a commit and no new valid instruction -> clear the valid bit
     if (csr_commit_i && ~csr_valid_i) begin

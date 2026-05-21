@@ -43,6 +43,7 @@ module load_unit
     output logic valid_o,
     // Load transaction ID - ISSUE_STAGE
     output logic [CVA6Cfg.TRANS_ID_BITS-1:0] trans_id_o,
+    output logic [CVA6Cfg.VLEN-1:0] pc_o, // FVT
     // Load result - ISSUE_STAGE
     output logic [CVA6Cfg.XLEN-1:0] result_o,
     // Load exception - ISSUE_STAGE
@@ -102,6 +103,7 @@ module load_unit
     logic [CVA6Cfg.TRANS_ID_BITS-1:0]    trans_id;        // scoreboard identifier
     logic [CVA6Cfg.XLEN_ALIGN_BYTES-1:0] address_offset;  // least significant bits of the address
     fu_op                                operation;       // type of load
+    logic [CVA6Cfg.VLEN-1:0]             ld_pc;           // FVT
   } ldbuf_t;
 
 
@@ -202,7 +204,7 @@ module load_unit
   assign req_port_o.cbo_op = ariane_pkg::CBO_NONE;
   // compose the load buffer write data, control is handled in the FSM
   assign ldbuf_wdata = {
-    lsu_ctrl_i.trans_id, lsu_ctrl_i.vaddr[CVA6Cfg.XLEN_ALIGN_BYTES-1:0], lsu_ctrl_i.operation
+    lsu_ctrl_i.trans_id, lsu_ctrl_i.vaddr[CVA6Cfg.XLEN_ALIGN_BYTES-1:0], lsu_ctrl_i.operation, lsu_ctrl_i.pc
   };
   // output address
   // we can now output the lower 12 bit as the index to the cache
@@ -458,6 +460,7 @@ module load_unit
     //  read the pending load buffer
     ldbuf_r    = req_port_i.data_rvalid;
     trans_id_o = ldbuf_q[ldbuf_rindex].trans_id;
+    pc_o       = load_data_q.ld_pc; // FVT
     valid_o    = 1'b0;
     ex_o.valid = 1'b0;
 
