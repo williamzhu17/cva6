@@ -258,6 +258,7 @@ module serdiv
       res_q          <= '0;
       cnt_q          <= '0;
       id_q           <= '0;
+      pc_q           <= '0; // FVT
       rem_sel_q      <= 1'b0;
       comp_inv_q     <= 1'b0;
       res_inv_q      <= 1'b0;
@@ -271,6 +272,7 @@ module serdiv
       res_q          <= res_d;
       cnt_q          <= cnt_d;
       id_q           <= id_d;
+      pc_q           <= pc_d; // FVT
       rem_sel_q      <= rem_sel_d;
       comp_inv_q     <= comp_inv_d;
       res_inv_q      <= res_inv_d;

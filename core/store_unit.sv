@@ -354,6 +354,7 @@ module store_unit
       .cbo_op_i             (cbo_op_q),
       .be_i                 (st_be_q),
       .data_size_i          (st_data_size_q),
+      .pc_i                 (st_pc_q),  // FVT
       .req_port_i           (req_port_i),
       .req_port_o           (req_port_o)
   );
