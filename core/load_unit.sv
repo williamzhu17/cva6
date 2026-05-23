@@ -460,7 +460,7 @@ module load_unit
     //  read the pending load buffer
     ldbuf_r    = req_port_i.data_rvalid;
     trans_id_o = ldbuf_q[ldbuf_rindex].trans_id;
-    pc_o       = load_data_q.ld_pc; // FVT
+    pc_o       = ldbuf_q[ldbuf_rindex].ld_pc; // FVT
     valid_o    = 1'b0;
     ex_o.valid = 1'b0;
 

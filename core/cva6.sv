@@ -1394,18 +1394,36 @@ module cva6
     dcache_req_ports_cache_acc[1].data_gnt &= !dcache_req_ports_ex_cache[2].data_req;
   end
 
+  // FVT variables for cache FV harness BEGIN
+
+  // ICACHE
+  logic pending_icache_req;
+  logic [CVA6Cfg.VLEN-1:0] icache_vaddr_q;
+  logic icache_killed_q;
+
+  // Undriven signals
+  logic [CVA6Cfg.FETCH_WIDTH-1:0]      icache_data;
+  logic [CVA6Cfg.FETCH_USER_WIDTH-1:0] icache_user;
+
+  // DCACHE
+  logic pending_dcache_flush;
+
+  // MMU Port
+  // Undriven signals
+  logic [CVA6Cfg.XLEN-1:0] mmu_cache_data;
+  logic pending_mmu_rvalid;
+
+  // Load Cache Port
+  // Undriven signals
+  logic [CVA6Cfg.XLEN-1:0] load_cache_data;
+  logic pending_load_rvalid, pending_load_rid;
+
+  // FVT END
+
   if (CVA6Cfg.DCacheType == config_pkg::WT) begin : gen_cache_wt
     // ------------------ FVT BEGIN ------------------
 
     // ICACHE
-    logic pending_icache_req;
-    logic [CVA6Cfg.VLEN-1:0] icache_vaddr_q;
-    logic icache_killed_q;
-
-    // Free signals — solver picks adversarially
-    logic [CVA6Cfg.FETCH_WIDTH-1:0]      icache_data;
-    logic [CVA6Cfg.FETCH_USER_WIDTH-1:0] icache_user;
-
     always_ff @(posedge clk_i or negedge rst_ni) begin
       if (!rst_ni) begin
         pending_icache_req <= 1'b0;
@@ -1448,8 +1466,6 @@ module cva6
     // DCACHE
 
     // D$ flush ack
-    logic pending_dcache_flush;
-
     always_ff @(posedge clk_i or negedge rst_ni) begin
       if (!rst_ni) begin
         pending_dcache_flush <= 1'b0;
@@ -1462,9 +1478,6 @@ module cva6
 
     // MMU Port
     // From dcache_req_ports_ex_cache[0] which becomes dcache_req_to_cache[0]
-    // data is undriven
-    logic [CVA6Cfg.XLEN-1:0] mmu_cache_data;
-    logic pending_mmu_rvalid;
 
     // One cycle delay for mmu cache response
     always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -1481,9 +1494,6 @@ module cva6
 
     // Load Cache Port
     // From dcache_req_ports_ex_cache[1] which becomes dcache_req_to_cache[1]
-    // load_cache_data is undriven
-    logic [CVA6Cfg.XLEN-1:0] load_cache_data;
-    logic pending_load_rvalid, pending_load_rid;
 
     // One cycle delay for load cache response
     always_ff @(posedge clk_i or negedge rst_ni) begin
