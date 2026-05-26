@@ -1461,7 +1461,8 @@ module cva6
     assign icache_dreq_cache_if.data  = icache_data;
     assign icache_dreq_cache_if.user  = CVA6Cfg.FETCH_USER_EN ? icache_user : '0;
     assign icache_dreq_cache_if.vaddr = icache_vaddr_q;
-    assign icache_dreq_cache_if.ex    = icache_areq_ex_cache.fetch_exception;
+    // assign icache_dreq_cache_if.ex    = icache_areq_ex_cache.fetch_exception;
+    assign icache_dreq_cache_if.ex    = '0;  // Assume no exceptions when fetching instructions TODO remove areq logic?
 
     // DCACHE
 
