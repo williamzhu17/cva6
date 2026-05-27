@@ -61,7 +61,7 @@ module ariane_regfile #(
   // loop from 1 to NUM_WORDS-1 as R0 is nil
   always_ff @(posedge clk_i, negedge rst_ni) begin : register_write_behavioral
     if (~rst_ni) begin
-      mem <= '{default: '0};
+      // mem <= '{default: '0}; FVT symbolic reset
     end else begin
       for (int unsigned j = 0; j < CVA6Cfg.NrCommitPorts; j++) begin
         for (int unsigned i = 0; i < NUM_WORDS; i++) begin
