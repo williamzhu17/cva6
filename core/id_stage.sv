@@ -288,8 +288,18 @@ module id_stage #(
       assign is_illegal_rvc[i] = 1'b0;
       assign instruction_rvc[i] = fetch_entry_i[i].instruction;
       assign is_compressed_rvc[i] = 1'b0;
+      assign is_zcmt_instr[i] = 1'b0;       // FVT: config bug
+      assign is_macro_instr[i] = 1'b0;      // FVT: config bug
       assign stall_instr_fetch[i] = 1'b0;
     end
+
+    assign is_last_macro_instr = 1'b0;      // FVT: config bug
+    assign is_double_rd_macro_instr = 1'b0; // FVT: config bug
+    assign jump_address = '0;               // FVT: config bug
+
+    assign compressed_valid_o = 1'b0;       // FVT: config bug
+    assign compressed_req_o = '0;           // FVT: config bug
+    assign dcache_req_ports_o = '0;         // FVT: config bug
   end
 
   // ---------------------------------------------------------
