@@ -53,6 +53,8 @@ module cva6_fifo_v3 #(
   dtype data_ft_n, data_ft_q;
   logic first_word_n, first_word_q;
 
+  logic [FifoDepth-1:0] valid_entries;  // FVT
+
   // fifo ram signals for fpga target
   logic fifo_ram_we;
   logic [ADDR_DEPTH-1:0] fifo_ram_read_address;
@@ -212,6 +214,12 @@ module cva6_fifo_v3 #(
       end
     end
   end
+
+  // FVT begin
+  for (genvar i = 0; i < FifoDepth; i++) begin
+    assign valid_entries[i] = ((i >= read_pointer_q) ? (i - read_pointer_q) : (i - read_pointer_q + FifoDepth)) < status_cnt_q;
+  end
+  // FVT end
 
   // pragma translate_off
   initial begin

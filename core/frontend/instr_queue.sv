@@ -478,6 +478,27 @@ module instr_queue
         .data_o    (instr_data_out[i]),
         .pop_i     (pop_instr[i])
     );
+
+    // FVT begin
+    cva6_fifo_v3 #(
+        .FPGA_ALTERA(CVA6Cfg.FpgaAlteraEn),
+        .DEPTH(ariane_pkg::FETCH_FIFO_DEPTH),
+        .DATA_WIDTH(CVA6Cfg.VLEN),
+        .FPGA_EN(CVA6Cfg.FpgaEn)
+    ) fvt_fifo_pc (
+        .clk_i     (clk_i),
+        .rst_ni    (rst_ni),
+        .flush_i   (flush_i),
+        .testmode_i(1'b0),
+        .full_o    (),
+        .empty_o   (),
+        .usage_o   (),
+        .data_i    (addr_i[i]),
+        .push_i    (push_instr_fifo[i]),
+        .data_o    (),
+        .pop_i     (pop_instr[i])
+    );
+    // FVT end
   end
   // or reduce and check whether we are retiring a taken branch (might be that the corresponding)
   // fifo is full.
