@@ -158,7 +158,6 @@ module store_unit
     pop_st_o               = 1'b0;
     ex_o                   = ex_i;
     trans_id_n             = lsu_ctrl_i.trans_id;
-    st_pc_n                = lsu_ctrl_i.pc; // FVT
     state_d                = state_q;
 
     case (state_q)
@@ -354,7 +353,6 @@ module store_unit
       .cbo_op_i             (cbo_op_q),
       .be_i                 (st_be_q),
       .data_size_i          (st_data_size_q),
-      .pc_i                 (st_pc_q),  // FVT
       .req_port_i           (req_port_i),
       .req_port_o           (req_port_o)
   );
@@ -391,7 +389,6 @@ module store_unit
       st_be_q        <= '0;
       st_data_q      <= '0;
       st_data_size_q <= '0;
-      st_pc_q        <= '0; // FVT
       trans_id_q     <= '0;
       amo_op_q       <= AMO_NONE;
       cbo_op_q       <= ariane_pkg::CBO_NONE;
@@ -401,7 +398,6 @@ module store_unit
       st_data_q      <= st_data_n;
       trans_id_q     <= trans_id_n;
       st_data_size_q <= st_data_size_n;
-      st_pc_q        <= st_pc_n;  // FVT
       amo_op_q       <= amo_op_d;
       cbo_op_q       <= cbo_op_d;
     end

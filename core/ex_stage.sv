@@ -376,7 +376,6 @@ module ex_stage
       .flush_i,
       .fu_data_i   (one_cycle_data),
       .csr_valid_i (|csr_valid_i),
-      .pc_i        (pc_i), // FVT
       .csr_ready_o (csr_ready),
       .csr_result_o(csr_result),
       .csr_commit_i,
@@ -429,7 +428,6 @@ module ex_stage
       .rst_ni,
       .flush_i,
       .mult_valid_i   (|mult_valid_i),
-      .pc_i           (pc_i), // FVT
       .fu_data_i      (mult_data),
       .result_o       (mult_result),
       .mult_valid_o   (mult_valid),
@@ -555,7 +553,6 @@ module ex_stage
       .stall_st_pending_i,
       .no_st_pending_o,
       .fu_data_i             (lsu_data),
-      .pc_i                  (pc_i), // FVT
       .lsu_ready_o,
       .lsu_valid_i           (|lsu_valid_i),
       .speculative_load_i    (speculative_load),

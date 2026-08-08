@@ -47,7 +47,6 @@ module load_store_unit
     input logic [31:0] tinst_i,
     // FU data needed to execute instruction - ISSUE_STAGE
     input fu_data_t fu_data_i,
-    input logic [CVA6Cfg.VLEN-1:0] pc_i, // FVT
     // Load Store Unit is ready - ISSUE_STAGE
     output logic lsu_ready_o,
     // Load Store Unit instruction is valid - ISSUE_STAGE
@@ -172,8 +171,6 @@ module load_store_unit
     output logic      [CVA6Cfg.PLEN-1:0] rvfi_mem_paddr_o
 );
 
-  logic [CVA6Cfg.VLEN-1:0] load_pc_o;  // FVT
-
   // data is misaligned
   logic data_misaligned;
   // --------------------------------------
@@ -234,7 +231,6 @@ module load_store_unit
 
   logic                             ld_valid;
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] ld_trans_id;
-  logic [         CVA6Cfg.VLEN-1:0] ld_pc;  // FVT
   logic [         CVA6Cfg.XLEN-1:0] ld_result;
   logic                             st_valid;
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] st_trans_id;
@@ -581,7 +577,6 @@ module load_store_unit
       .valid_o              (ld_valid),
       .trans_id_o           (ld_trans_id),
       .result_o             (ld_result),
-      .pc_o                 (ld_pc), // FVT
       .ex_o                 (ld_ex),
       .mbe_i                (mbe_i),
       // MMU port
@@ -613,13 +608,10 @@ module load_store_unit
   // can be tuned to trade-off IPC vs. cycle time
 
   shift_reg #(
-      .dtype(logic [$bits(ld_valid) + $bits(ld_trans_id) + $bits(ld_result) + $bits(ld_ex) + $bits(ld_pc) - 1:0]), // FVT
       .Depth(CVA6Cfg.NrLoadPipeRegs)
   ) i_pipe_reg_load (
       .clk_i,
-      .rst_ni,
-      .d_i({ld_valid, ld_trans_id, ld_result, ld_ex, ld_pc}), // FVT
-      .d_o({load_valid_o, load_trans_id_o, load_result_o, load_exception_o, load_pc_o}) // FVT
+      .rst_ni
   );
 
   shift_reg #(
@@ -871,8 +863,7 @@ module load_store_unit
     fu_data_i.operation,
     fu_data_i.trans_id,
     speculative_load_i,
-    1'b0,
-    pc_i  // FVT
+    1'b0
   };
 
   lsu_bypass #(
