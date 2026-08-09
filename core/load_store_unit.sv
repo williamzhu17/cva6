@@ -608,10 +608,13 @@ module load_store_unit
   // can be tuned to trade-off IPC vs. cycle time
 
   shift_reg #(
+      .dtype(logic [$bits(ld_valid) + $bits(ld_trans_id) + $bits(ld_result) + $bits(ld_ex) - 1:0]),
       .Depth(CVA6Cfg.NrLoadPipeRegs)
   ) i_pipe_reg_load (
       .clk_i,
-      .rst_ni
+      .rst_ni,
+      .d_i({ld_valid, ld_trans_id, ld_result, ld_ex}),
+      .d_o({load_valid_o, load_trans_id_o, load_result_o, load_exception_o})
   );
 
   shift_reg #(
