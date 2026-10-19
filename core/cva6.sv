@@ -1515,12 +1515,12 @@ module cva6
     // Store Cache Port
     // From dcache_req_ports_ex_cache[2] which becomes dcache_req_to_cache[3]
     // Immediately acknowledge request
-    assign dcache_req_from_cache[3] = dcache_req_to_cache[3].data_req;
+    assign dcache_req_from_cache[3] = '{data_gnt: dcache_req_to_cache[3].data_req, default: '0};
 
     // Write Buffer Status
-    // Assume no write buffer
-    assign dcache_commit_wbuffer_empty = 1'b0;
-    assign dcache_commit_wbuffer_not_ni = 1'b0;
+    // Assume no write buffer: always empty and never holding NI data
+    assign dcache_commit_wbuffer_empty = 1'b1;
+    assign dcache_commit_wbuffer_not_ni = 1'b1;
 
     // Invalid Ready
     assign inval_ready = 1'b1;
