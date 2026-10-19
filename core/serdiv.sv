@@ -28,6 +28,7 @@ module serdiv
     input logic rst_ni,
     // Serdiv translation ID - Mult
     input logic [CVA6Cfg.TRANS_ID_BITS-1:0] id_i,
+    input logic [CVA6Cfg.VLEN-1:0] pc_i, // FVT
     // A operand - Mult
     input logic [WIDTH-1:0] op_a_i,
     // B operand - Mult
@@ -46,6 +47,7 @@ module serdiv
     input logic out_rdy_i,
     // Serdiv transaction ID - Mult
     output logic [CVA6Cfg.TRANS_ID_BITS-1:0] id_o,
+    output logic [CVA6Cfg.VLEN-1:0] pc_o,  // FVT
     // Serdiv result - Mult
     output logic [WIDTH-1:0] res_o
 );
@@ -69,6 +71,7 @@ module serdiv
   logic op_b_neg_one, op_b_neg_one_q, op_b_neg_one_d;
 
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] id_q, id_d;
+  logic [CVA6Cfg.VLEN-1:0]          pc_q, pc_d; // FVT
 
   logic rem_sel_d, rem_sel_q;
   logic comp_inv_d, comp_inv_q;
@@ -240,6 +243,14 @@ module serdiv
   assign id_d = (load_en) ? id_i : id_q;
   assign id_o = id_q;
 
+  assign pc_d = (load_en) ? pc_i : pc_q;  // FVT
+  assign pc_o = pc_q;                     // FVT
+
+  // FVT begin
+  logic fvt_busy;
+  assign fvt_busy = (state_q != IDLE);
+  // FVT end
+
   assign op_a_d = (a_reg_en) ? add_out : op_a_q;
   assign op_b_d = (b_reg_en) ? b_mux : op_b_q;
   assign res_d = (load_en) ? '0 : (res_reg_en) ? {res_q[$high(res_q)-1:0], ab_comp} : res_q;
@@ -252,6 +263,7 @@ module serdiv
       res_q          <= '0;
       cnt_q          <= '0;
       id_q           <= '0;
+      pc_q           <= '0; // FVT
       rem_sel_q      <= 1'b0;
       comp_inv_q     <= 1'b0;
       res_inv_q      <= 1'b0;
@@ -265,6 +277,7 @@ module serdiv
       res_q          <= res_d;
       cnt_q          <= cnt_d;
       id_q           <= id_d;
+      pc_q           <= pc_d; // FVT
       rem_sel_q      <= rem_sel_d;
       comp_inv_q     <= comp_inv_d;
       res_inv_q      <= res_inv_d;

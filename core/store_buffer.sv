@@ -46,6 +46,7 @@ module store_buffer
     input logic [CVA6Cfg.XLEN-1:0] data_i,  // data which is placed in the queue
     input logic [(CVA6Cfg.XLEN/8)-1:0] be_i,  // byte enable in
     input logic [1:0] data_size_i,  // type of request we are making (e.g.: bytes to write)
+    input logic [CVA6Cfg.VLEN-1:0] pc_i,  // FVT
     input cbo_t cbo_op_i,  // type of cache block operation
 
     // D$ interface
@@ -64,6 +65,7 @@ module store_buffer
     cbo_t cbo_op;
     logic valid;  // this entry is valid, we need this for checking if the address offset matches
     logic wait_rvalid;  // need to wait for rvalid...
+    logic [CVA6Cfg.VLEN-1:0] pc;  // FVT
   }
       speculative_queue_n[DEPTH_SPEC-1:0],
       speculative_queue_q[DEPTH_SPEC-1:0],
@@ -102,6 +104,7 @@ module store_buffer
       speculative_queue_n[speculative_write_pointer_q].valid = 1'b1;
       speculative_queue_n[speculative_write_pointer_q].cbo_op = cbo_op_i;
       speculative_queue_n[speculative_write_pointer_q].wait_rvalid = 1'b0;
+      speculative_queue_n[speculative_write_pointer_q].pc = pc_i; // FVT
       // advance the write pointer
       speculative_write_pointer_n = speculative_write_pointer_q + 1'b1;
       speculative_status_cnt++;

@@ -26,6 +26,7 @@ module multiplier
     input  logic                             rst_ni,
     // Multiplier transaction ID - Mult
     input  logic [CVA6Cfg.TRANS_ID_BITS-1:0] trans_id_i,
+    input  logic [         CVA6Cfg.VLEN-1:0] pc_i, // FVT
     // Multiplier instruction is valid - Mult
     input  logic                             mult_valid_i,
     // Multiplier operation - Mult
@@ -77,6 +78,7 @@ module multiplier
 
   // Pipeline register
   logic [CVA6Cfg.TRANS_ID_BITS-1:0] trans_id_q;
+  logic [CVA6Cfg.VLEN-1:0]          pc_q; // FVT
   logic                             mult_valid_q;
   fu_op operator_d, operator_q;
   logic [CVA6Cfg.XLEN*2-1:0] mult_result_d, mult_result_q;
@@ -160,6 +162,7 @@ module multiplier
     end else begin
       // Input silencing
       trans_id_q    <= trans_id_i;
+      pc_q          <= pc_i;  // FVT
       // Output Register
       mult_valid_q  <= mult_valid;
       operator_q    <= operator_d;
