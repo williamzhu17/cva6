@@ -259,6 +259,7 @@ module instr_queue
     /* verilator lint_off WIDTH */
     assign instr_data_in[0].instr = instr_i[0];
     assign instr_data_in[0].cf = cf_type_i[0];
+    assign instr_data_in[0].cf_valid = cf_valid_i[0];  // FVT: was undriven without RVC
     assign instr_data_in[0].ex = exception_i;  // exceptions hold for the whole fetch packet
     assign instr_data_in[0].ex_vaddr = exception_addr_i;
     if (CVA6Cfg.RVH) begin : gen_hyp_ex_without_C

@@ -1570,6 +1570,7 @@ module cva6
     assign dcache_req_from_cache[0].data_gnt = dcache_req_to_cache[0].data_req;
     assign dcache_req_from_cache[0].data_rvalid = pending_mmu_rvalid;
     assign dcache_req_from_cache[0].data_rdata = mmu_cache_data;
+    assign dcache_req_from_cache[0].data_error = 1'b0;  // no ECC errors
 
     // Load Cache Port
     // From dcache_req_ports_ex_cache[1] which becomes dcache_req_to_cache[1]
@@ -1589,6 +1590,7 @@ module cva6
     assign dcache_req_from_cache[1].data_rvalid = pending_load_rvalid;
     assign dcache_req_from_cache[1].data_rid = pending_load_rid;
     assign dcache_req_from_cache[1].data_rdata = load_cache_data;
+    assign dcache_req_from_cache[1].data_error = 1'b0;  // no ECC errors
 
     // Store Cache Port
     // From dcache_req_ports_ex_cache[2] which becomes dcache_req_to_cache[3]
