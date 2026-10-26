@@ -1400,6 +1400,9 @@ module cva6
   logic pending_icache_req;
   logic [CVA6Cfg.VLEN-1:0] icache_vaddr_q;
   logic icache_killed_q;
+  // Response held by the FV harness (duv_fv_stub OBS refetch hold): the request stays
+  // pending until released. Undriven (free) in flows without that harness.
+  logic fvt_ifetch_hold;
 
   // Undriven signals
   logic [CVA6Cfg.FETCH_WIDTH-1:0]      icache_data;
@@ -1434,7 +1437,8 @@ module cva6
         if (icache_dreq_if_cache.req && icache_dreq_cache_if.ready) begin
           pending_icache_req <= 1'b1;
           icache_vaddr_q     <= icache_dreq_if_cache.vaddr;
-        end else if (icache_areq_ex_cache.fetch_valid) begin
+        end else if (icache_areq_ex_cache.fetch_valid && !(fvt_ifetch_hold && !icache_killed_q)) begin
+          // A held response stays pending; a killed one is dropped as before.
           pending_icache_req <= 1'b0;
         end
 
@@ -1457,7 +1461,8 @@ module cva6
                                         && icache_areq_ex_cache.fetch_valid
                                         && !icache_killed_q
                                         && !icache_dreq_if_cache.kill_s2
-                                        && !flush_ctrl_if;
+                                        && !flush_ctrl_if
+                                        && !fvt_ifetch_hold;
     assign icache_dreq_cache_if.data  = icache_data;
     assign icache_dreq_cache_if.user  = CVA6Cfg.FETCH_USER_EN ? icache_user : '0;
     assign icache_dreq_cache_if.vaddr = icache_vaddr_q;
